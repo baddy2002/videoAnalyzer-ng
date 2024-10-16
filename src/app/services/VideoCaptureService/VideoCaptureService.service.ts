@@ -1,6 +1,8 @@
+import { HttpClient } from '@angular/common/http'; // Importa HttpClient
 import { isPlatformBrowser } from '@angular/common';
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { FilesetResolver, PoseLandmarker, PoseLandmarkerOptions, DrawingUtils } from '@mediapipe/tasks-vision';
+import { error } from 'console';
 
 
 
@@ -9,10 +11,14 @@ import { FilesetResolver, PoseLandmarker, PoseLandmarkerOptions, DrawingUtils } 
 })
 export class VideoCaptureService {
     private poseLandmarker: PoseLandmarker | null = null;
-  private videoStream: MediaStream | null = null;
-  private lastFrame: string | null = null;
-
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+    private videoStream: MediaStream | null = null;
+    private lastFrame: string | null = null;
+    private keypointsData: Record<number, number[][]> = {}; // Struttura per memorizzare i keypoints
+    private apiUrl = 'http://localhost:8000/'
+    constructor(
+        @Inject(PLATFORM_ID) private platformId: Object,
+        private http: HttpClient
+    ) {}
 
   // Metodo per inizializzare il modello di pose
   async initializePoseLandmarker(): Promise<void> {
@@ -25,76 +31,137 @@ export class VideoCaptureService {
           modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task`, // Usa il modello completo per una migliore accuratezza
         },
         runningMode: 'VIDEO',
-        numPoses: 1, // Mantieni 1 se desideri rilevare solo una posa
-        minPoseDetectionConfidence: 0.5, // Come nel tuo backend
-        minPosePresenceConfidence: 0.5, // Come nel tuo backend
-        minTrackingConfidence: 0.5, // Come nel tuo backend
+        numPoses: 1, 
+        minPoseDetectionConfidence: 0.5, // Come nel  backend
+        minPosePresenceConfidence: 0.5, // Come nel  backend
+        minTrackingConfidence: 0.5, // Come nel  backend
         outputSegmentationMasks: true, // Abilita la maschera di segmentazione per un'analisi più dettagliata
       };
 
     this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, poseLandmarkerOptions);
   }
 
-  // Metodo per gestire i risultati del rilevamento pose
-  private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement): void {
-    if (results.landmarks) {
-      console.log('Pose landmarks:', results.landmarks);
-      if (isPlatformBrowser(this.platformId)) {
-        if(canvasElement){
-            const canvasCtx = canvasElement.getContext('2d');
+    // Nuovo metodo per recuperare i keypoints dal server
+    async fetchKeypoints(uuid: string): Promise<void> {
+        try {
+            const response = await this.http.get<Record<number, number[][]>>(`${this.apiUrl}analyze/${uuid}/keypoints`).toPromise();
+            if(response)
+                this.keypointsData = response;
+            else 
+                console.error("Response from server is undefined: " + response)
+        } catch (error) {
+            console.error('Errore durante il recupero dei keypoints:', error);
+        }
+    }
 
-            // Imposta dimensioni del canvas
-            canvasElement.width = videoElement.videoWidth;
-            canvasElement.height = videoElement.videoHeight;
+    // Metodo per gestire i risultati del rilevamento pose
+    private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, frameNumber: number): void {
+        if (results.landmarks) {
+            console.log('Pose landmarks:', results.landmarks);
+            if (isPlatformBrowser(this.platformId)) {
+                if(canvasElement){
+                    const canvasCtx = canvasElement.getContext('2d');
+
+                    // Imposta dimensioni del canvas
+                    canvasElement.width = videoElement.videoWidth;
+                    canvasElement.height = videoElement.videoHeight;
+            
+                    // Disegna il frame video
+                    if (canvasCtx) {
+                        canvasCtx?.clearRect(0, 0, canvasElement.width, canvasElement.height); // Pulisce il canvas prima di disegnare
+                        canvasCtx?.drawImage(videoElement, 0, 0);
+                        const drawingUtils = new DrawingUtils(canvasCtx);
+                        for (const landmark of results.landmarks) {
+                            drawingUtils.drawLandmarks(landmark, {
+                            radius: (data) => DrawingUtils.lerp(data.from!.z, -0.15, 0.1, 5, 1)
+                            });
+                            drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
+                        }
+
+                        if (this.keypointsData[frameNumber]) {
+                            const keypoints = this.keypointsData[frameNumber];
     
-            // Disegna il frame video
-            canvasCtx?.clearRect(0, 0, canvasElement.width, canvasElement.height); // Pulisce il canvas prima di disegnare
-            canvasCtx?.drawImage(videoElement, 0, 0);
-            if (canvasCtx) {
-              const drawingUtils = new DrawingUtils(canvasCtx);
-              for (const landmark of results.landmarks) {
-                drawingUtils.drawLandmarks(landmark, {
-                  radius: (data) => DrawingUtils.lerp(data.from!.z, -0.15, 0.1, 5, 1)
-                });
-                drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
-              }
+                            // Disegna i keypoints del server
+                            for (const keypoint of keypoints) {
+                                const index = keypoint[0]; // Indice del keypoint
+                                const x = keypoint[1] * canvasElement.width; // Converti in coordinate canvas
+                                const y = keypoint[2] * canvasElement.height; // Converti in coordinate canvas
+                                const confidence = keypoint[3]; // Affidabilità
+    
+                                // Disegna il keypoint se ha una certa affidabilità
+                                if (confidence > 0.5) {
+                                    canvasCtx?.beginPath();
+                                    canvasCtx?.arc(x, y, 5, 0, 2 * Math.PI);
+                                    canvasCtx.fillStyle = 'blue'; // Colore per keypoints del server
+                                    canvasCtx?.fill();
+                                }
+                            }
+    
+                            // Connessioni manuali per i keypoints del server
+                            const connections = PoseLandmarker.POSE_CONNECTIONS; // Usa le stesse connessioni
+                            for (const connection of connections) {
+                                const startKeypoint = keypoints.find(kp => kp[0] === connection.start);
+                                const endKeypoint = keypoints.find(kp => kp[0] === connection.end);
+    
+                                if (startKeypoint && endKeypoint) {
+                                    const startX = startKeypoint[1] * canvasElement.width;
+                                    const startY = startKeypoint[2] * canvasElement.height;
+                                    const endX = endKeypoint[1] * canvasElement.width;
+                                    const endY = endKeypoint[2] * canvasElement.height;
+    
+                                    // Disegna la linea di connessione
+                                    canvasCtx?.beginPath();
+                                    canvasCtx?.moveTo(startX, startY);
+                                    canvasCtx?.lineTo(endX, endY);
+                                    canvasCtx.strokeStyle = 'blue'; // Colore per connessioni del server
+                                    canvasCtx.lineWidth = 2;
+                                    canvasCtx?.stroke();
+                                }
+                            }
+                        }
+                    }
+                }
+
             }
         }
-
-      }
     }
-  }
 
-  // Metodo per avviare lo streaming video e rilevare pose
-  async startVideo(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement): Promise<void> {
-    try {
-      this.videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      videoElement.srcObject = this.videoStream;
+    // Metodo per avviare lo streaming video e rilevare pose
+    async startVideo(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, uuid: string): Promise<void> {
+        try {
+            // Recupera i keypoints dal server prima di iniziare il video
+            await this.fetchKeypoints(uuid);
 
-      if (!this.poseLandmarker) {
-        await this.initializePoseLandmarker(); // Inizializza il modello se non è ancora stato fatto
-      }
+            this.videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = this.videoStream;
 
-      const processFrame = async () => {
-        if (this.poseLandmarker && videoElement && videoElement.videoWidth && videoElement.videoHeight) {
-            try{
-                const imageBitmap = await createImageBitmap(videoElement);
-                const results = this.poseLandmarker.detectForVideo(imageBitmap, performance.now());
-                this.onResults(results, videoElement, canvasElement);  // Gestisci i risultati
-                imageBitmap.close();  // Rilascia memoria bitmap
+            if (!this.poseLandmarker) {
+                await this.initializePoseLandmarker(); // Inizializza il modello se non è ancora stato fatto
             }
-            catch(error){
-                console.error('Errore durante la creazione dell\'imageBitmap:', error);
-            }
+
+            let frameCount = 0;
+
+            const processFrame = async () => {
+                if (this.poseLandmarker && videoElement && videoElement.videoWidth && videoElement.videoHeight) {
+                    try{
+                        const imageBitmap = await createImageBitmap(videoElement);
+                        const results = this.poseLandmarker.detectForVideo(imageBitmap, performance.now());
+                        this.onResults(results, videoElement, canvasElement, frameCount);  // Gestisci i risultati
+                        frameCount++;
+                        imageBitmap.close();  // Rilascia memoria bitmap
+                    }
+                    catch(error){
+                        console.error('Errore durante la creazione dell\'imageBitmap:', error);
+                    }
+                }
+                requestAnimationFrame(processFrame); // Richiama il frame successivo
+            };
+
+            requestAnimationFrame(processFrame); // Avvia l'elaborazione del video frame
+        } catch (error) {
+        console.error('Error accessing the camera:', error);
         }
-        requestAnimationFrame(processFrame); // Richiama il frame successivo
-      };
-
-      requestAnimationFrame(processFrame); // Avvia l'elaborazione del video frame
-    } catch (error) {
-      console.error('Error accessing the camera:', error);
     }
-  }
 
   // Metodo per fermare lo streaming video
   async stopVideo(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement): Promise<void> {
@@ -108,7 +175,7 @@ export class VideoCaptureService {
 
     this.lastFrame = await this.getCanvasImage(canvasElement);
 
-    // Pulisci il canvas (opzionale)
+    // Pulisci il canvas
     const context = canvasElement.getContext('2d');
     if (context) {
         context.clearRect(0, 0, canvasElement.width, canvasElement.height);
