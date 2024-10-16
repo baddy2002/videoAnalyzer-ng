@@ -1,0 +1,72 @@
+<div class="flex flex-col items-center justify-center p-4">
+    <h1 class="text-2xl font-bold mb-4">{{ video?.name }}</h1> <!-- Titolo del video -->
+    <vg-player (onPlayerReady)="onPlayerReady($event)">
+        <vg-overlay-play></vg-overlay-play>
+        <vg-buffering vgFor="singleVideo"></vg-buffering>
+        <vg-scrub-bar>
+            <vg-scrub-bar-current-time></vg-scrub-bar-current-time>
+            <vg-scrub-bar-buffering-time></vg-scrub-bar-buffering-time>
+        </vg-scrub-bar>
+
+      <vg-controls>
+        <vg-play-pause></vg-play-pause>
+        <vg-playback-button></vg-playback-button>
+        <vg-time-display vgProperty="current" vgFormat="mm:ss"></vg-time-display>
+        <vg-scrub-bar style="pointer-events: none;"></vg-scrub-bar>
+        <vg-time-display vgProperty="left" vgFormat="mm:ss"></vg-time-display>
+        <vg-time-display vgProperty="total" vgFormat="mm:ss"></vg-time-display>
+        <vg-track-selector></vg-track-selector>
+        <vg-mute></vg-mute>
+        <vg-volume></vg-volume>
+        <vg-fullscreen></vg-fullscreen>
+        
+        <button class="cast-button text-white text-lg" (click)="startCasting()" [disabled]="!isCastAvailable" aria-label="Cast">
+            <i class="fa fa-video-camera"></i> <!-- Icona di videocamera -->
+        </button>
+      </vg-controls>
+
+      <video [vgMedia]="$any(media)"
+            #media id="singleVideo"
+            preload="auto"
+            [src]="'http://localhost:8000/analyze/' + video?.name + '/streaming'"
+            [poster]="'data:image/png;base64,'+video?.thumbnail"
+            crossorigin="use-credentials"
+      >
+        browser non sopporta i video
+      </video>
+    </vg-player>
+   
+    <p class="mt-4 text-lg text-gray-700 leading-relaxed text-center">{{ video?.description }}</p>
+
+    <div class="mt-6 p-4 bg-gray-100 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold">Informazioni Aggiuntive</h2>
+        <p class="text-gray-600 mt-2 leading-relaxed">
+            I valori mostrano le percentuali di copertura delle aree e delle porzioni del corpo utilizzate nel video. 
+            Assicurati di registrare il tuo video da una posizione consona per un corretto confronto.
+        </p>
+
+        <h3 class="font-medium mt-4">Aree:</h3>
+        <p>
+            DX: {{ (video?.area?.dx * 100).toFixed(2) }}% | 
+            SX: {{ (video?.area?.sx * 100).toFixed(2) }}%
+        </p>
+
+        <h3 class="font-medium mt-4">Porzioni:</h3>
+        <p>
+            Testa: {{ (video?.portions?.head * 100).toFixed(2) }}% | 
+            Corpo: {{ (video?.portions?.body * 100).toFixed(2) }}% | 
+            Piedi: {{ (video?.portions?.feets * 100).toFixed(2) }}% | 
+            Mani: {{ (video?.portions?.hands * 100).toFixed(2) }}% | 
+            Braccia: {{ (video?.portions?.arms * 100).toFixed(2) }}% | 
+            Gambe: {{ (video?.portions?.legs * 100).toFixed(2) }}%
+        </p>
+    </div>
+
+    <a (click)="navigateTo('/videos/'+video.uuid+'/confront')" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition duration-200">
+        Confronta
+    </a>
+
+    <a [href]="'http://localhost:8000/analyze/' + video?.name + '/streaming'" download class="mt-2 inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition duration-200">
+        Download Video
+    </a>
+</div>

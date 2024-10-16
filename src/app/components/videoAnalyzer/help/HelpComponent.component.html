@@ -1,0 +1,56 @@
+
+<app-header></app-header>
+
+<div class="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+    <!-- Main Section -->
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-4xl w-full text-center">
+      <h1 class="text-4xl font-bold text-gray-800 mb-6">Hai bisogno di aiuto?</h1>
+      <p class="text-lg text-gray-600 mb-8">
+        Trova risposte alle domande più comuni sull'utilizzo dell'app AI Video Analyzer.
+      </p>
+  
+      <!-- FAQ Section -->
+      <div class="text-left">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Domande frequenti (FAQ)</h2>
+        <ul class="list-disc list-inside text-gray-600 space-y-4">
+          <li>
+            <strong>1. Come posso caricare un video per l'analisi?</strong><br />
+            Vai alla pagina <em>Inserisci un video da analizzare</em> e seleziona il file video dal tuo dispositivo. L'AI elaborerà il video e fornirà feedback sui movimenti.
+          </li>
+          <li>
+            <strong>2. Quali formati video sono supportati?</strong><br />
+            I formati video più comuni come MP4 e AVI sono supportati. Assicurati che il file non superi la dimensione massima consentita (500MB).
+          </li>
+          <li>
+            <strong>3. Quanto tempo impiega l'analisi del video?</strong><br />
+            Dipende dalla durata e risoluzione del video, ma la maggior parte delle analisi viene completata entro pochi minuti grazie all'ottimizzazione AI in tempo reale.
+          </li>
+          <li>
+            <strong>4. Posso confrontare più video contemporaneamente?</strong><br />
+            Attualmente l'analisi supporta solo un video alla volta. Stiamo lavorando su una funzione di confronto multiplo.
+          </li>
+          <li>
+            <strong>5. L'AI può riconoscere tutti i tipi di movimenti?</strong><br />
+            L'algoritmo è ottimizzato per movimenti sportivi e fitness, ma stiamo espandendo il supporto ad altre categorie come danza e riabilitazione.
+          </li>
+        </ul>
+      </div>
+  
+      <!-- Navigation Buttons -->
+      <div class="mt-8">
+        <button
+          (click)="navigateTo('')"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition">
+          Torna alla Home
+        </button>
+      </div>
+    </div>
+  
+    <!-- Footer for Visual Appeal -->
+    <div class="mt-10 text-gray-500 text-sm">
+      © 2024 AI Video Analyzer. Tutti i diritti riservati.
+    </div>
+  </div>
+  
+
+<app-footer></app-footer>

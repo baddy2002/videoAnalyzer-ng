@@ -1,0 +1,11 @@
+
+<app-header></app-header>
+<h2 class="text-2xl font-bold mb-6 text-center">Analizza Video</h2>
+
+<app-form [inputsConfig]="inputsConfig" (ngModelChange)="onValueChange($event)" (submitEvent)="onSubmit()"></app-form>
+
+
+<!-- Mostra il popup se `showPopup` è true -->
+<app-popUp *ngIf="showPopup" [message]="serverResponse" (close)="onClosePopup()"></app-popUp>
+
+<app-footer></app-footer>

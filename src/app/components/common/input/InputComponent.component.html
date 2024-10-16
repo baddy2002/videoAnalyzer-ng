@@ -1,0 +1,20 @@
+<div class="mb-4">
+    <label [for]="id" class="block text-sm font-medium text-gray-700">{{ name }}:</label>
+    <input *ngIf="!isFileInput"
+       [type]="type"
+       [id]="id"
+       [name]="name"
+       [(ngModel)]="ngModel"
+       (ngModelChange)="ngModelChange.emit($event)"
+       [class]="inputClass"
+       [required]="required">
+
+    <input *ngIf="isFileInput"
+       [type]="type"
+       [id]="id"
+       [name]="name"
+       (change)="onFileChange($event)"
+       [class]="inputClass"
+       [required]="required">
+  </div>
+  

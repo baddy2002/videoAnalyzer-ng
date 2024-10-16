@@ -1,0 +1,45 @@
+<app-header></app-header>
+
+<div class="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+    <!-- Main Section -->
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-4xl w-full text-center">
+      <h1 class="text-4xl font-bold text-gray-800 mb-4">AI Video Analyzer</h1>
+      <p class="text-lg text-gray-600 mb-8">
+        Analizza i tuoi video in tempo reale per valutare se i movimenti sono corretti.
+      </p>
+  
+      <!-- Buttons Section -->
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <!-- Upload a Video -->
+        <button
+          (click)="navigateTo('analyze')"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+          Inserisci un video da analizzare
+        </button>
+  
+        <!-- Browse Available Videos -->
+        <button
+          (click)="navigateTo('videos')"
+          class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+          Cerca video disponibili
+        </button>
+  
+        <!-- About / Info Section -->
+        <button
+          (click)="navigateTo('about')"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition">
+          Informazioni sull'analisi
+        </button>
+      </div>
+    </div>
+  
+    <!-- Additional Section for Visual Appeal (Optional) -->
+    <div class="mt-10 w-full max-w-4xl bg-gray-200 p-6 rounded-lg shadow-md">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Come funziona l'AI Video Analyzer?</h2>
+      <p class="text-gray-600 text-md">
+        Grazie all'intelligenza artificiale, l'applicazione analizza i movimenti nei video caricati per fornire feedback in tempo reale su come migliorare le prestazioni. Scopri di più sui nostri algoritmi avanzati e come possiamo aiutarti a monitorare i progressi.
+      </p>
+    </div>
+</div>
+
+<app-footer></app-footer>

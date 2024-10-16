@@ -1,0 +1,26 @@
+<form 
+  [attr.enctype]="enctype" 
+  [ngClass]="formClass" 
+  (ngSubmit)="onSubmit()">
+
+  <!-- Itera sugli input configurati -->
+    <app-input *ngFor="let input of inputsConfig"
+             [type]="input.type"
+             [(ngModel)]="input.ngModel"
+             [inputClass]="input.inputClass"
+             [id]="input.id"
+             [name]="input.name"
+             [required]="input.required"
+             [isFileInput]="input.isFileInput"
+             (ngModelChange)="onValueChange($event)">
+  </app-input>
+
+  <!-- Bottone di invio -->
+  <div class="flex justify-center">
+    <button 
+      type="submit" 
+      [ngClass]="buttonClass">
+      {{ buttonText }}
+    </button>
+  </div>
+</form>

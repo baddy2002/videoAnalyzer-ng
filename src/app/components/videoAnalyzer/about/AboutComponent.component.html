@@ -1,0 +1,49 @@
+<app-header></app-header>
+
+<div class="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+    <!-- Main Section -->
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-4xl w-full text-center">
+      <h1 class="text-4xl font-bold text-gray-800 mb-4">Informazioni sull'AI Video Analyzer</h1>
+      <p class="text-lg text-gray-600 mb-8">
+        AI Video Analyzer è un'applicazione avanzata che utilizza l'intelligenza artificiale per analizzare i movimenti delle persone nei video, fornendo feedback in tempo reale sulla correttezza dei movimenti.
+      </p>
+  
+      <!-- How It Works Section -->
+      <div class="text-left">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Come funziona?</h2>
+        <p class="text-gray-600 mb-4">
+          L'applicazione sfrutta modelli di deep learning e tecniche avanzate di computer vision per rilevare e valutare le pose delle persone nei video. I nostri algoritmi sono ottimizzati per l'analisi in tempo reale, permettendo di confrontare movimenti corretti e scorrette in varie attività fisiche.
+        </p>
+  
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Per chi è pensata?</h2>
+        <p class="text-gray-600 mb-8">
+          AI Video Analyzer è ideale per allenatori, insegnanti di danza, fisioterapisti e tutti coloro che desiderano migliorare le performance fisiche monitorando e correggendo i movimenti in tempo reale.
+        </p>
+      </div>
+  
+      <!-- Navigation Buttons -->
+      <div class="flex justify-center space-x-6">
+        <!-- Go to Home -->
+        <button
+          (click)="navigateTo('')"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition">
+          Torna alla Home
+        </button>
+  
+        <!-- Go to Help -->
+        <button
+          (click)="navigateTo('help')"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition">
+          Vai alla pagina di aiuto
+        </button>
+      </div>
+    </div>
+  
+    <!-- Footer for Visual Appeal -->
+    <div class="mt-10 text-gray-500 text-sm">
+      © 2024 AI Video Analyzer. Tutti i diritti riservati.
+    </div>
+  </div>
+  
+
+  <app-footer></app-footer>
