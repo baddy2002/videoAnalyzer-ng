@@ -14,6 +14,11 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
     @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>; // Usa ! per evitare il controllo di null  
     @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
 
+    // Nuove proprietà per altezza, larghezza e fps
+    videoWidth: number = 1920; // Imposta un valore di larghezza predefinito
+    videoHeight: number = 1080;  // Imposta un valore di altezza predefinito
+    videoFPS: number = 30;       // Imposta un valore di FPS predefinito
+
     private uuid: string = '';
 
     constructor(
@@ -39,10 +44,12 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
     }
   
     startVideo() {
-
-            if(this.videoElement && this.canvasElement)
-                this.videoCaptureService.startVideo(this.videoElement.nativeElement, this.canvasElement.nativeElement, this.uuid); // Usa il servizio per avviare il video
-        
+            if(this.videoElement && this.canvasElement){
+              this.videoElement.nativeElement.width = this.videoWidth; // Imposta larghezza video
+              this.videoElement.nativeElement.height = this.videoHeight; // Imposta altezza video
+            
+                this.videoCaptureService.startVideo(this.videoElement.nativeElement, this.canvasElement.nativeElement, this.uuid, this.videoFPS); // Usa il servizio per avviare il video
+            }
     }
 
     stopVideo() {

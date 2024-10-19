@@ -3,7 +3,9 @@ import { isPlatformBrowser } from '@angular/common';
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { FilesetResolver, PoseLandmarker, PoseLandmarkerOptions, DrawingUtils } from '@mediapipe/tasks-vision';
 import { error } from 'console';
-
+import { WebSocketStreamService } from '../WebSocketStreamService/WebSocketStreamService';
+import { FilteredLandmark, Landmark } from '../../model/Landmark';
+import { Subscription } from 'rxjs';
 
 
 @Injectable({
@@ -15,10 +17,29 @@ export class VideoCaptureService {
     private lastFrame: string | null = null;
     private keypointsData: Record<number, number[][]> = {}; // Struttura per memorizzare i keypoints
     private apiUrl = 'http://localhost:8000/'
+    private keypointsSubscription: Subscription | null = null; // Aggiungi una subscription
+    private socketData: any = null;
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object,
+        private webSocketStreamService: WebSocketStreamService,
         private http: HttpClient
-    ) {}
+    ) {
+        
+    }
+
+    private subscribeToKeypoints(): void {
+        this.keypointsSubscription = this.webSocketStreamService.keypointsSubject.subscribe((data) => {
+            console.log('Dati ricevuti dal WebSocket:', data);
+
+
+            this.socketData = data
+        });
+    }
+
+    // disiscrivi quando il servizio non è più necessario
+    ngOnDestroy(): void {
+        this.keypointsSubscription?.unsubscribe();
+    }
 
   // Metodo per inizializzare il modello di pose
   async initializePoseLandmarker(): Promise<void> {
@@ -44,7 +65,7 @@ export class VideoCaptureService {
     // Nuovo metodo per recuperare i keypoints dal server
     async fetchKeypoints(uuid: string): Promise<void> {
         try {
-            const response = await this.http.get<Record<number, number[][]>>(`${this.apiUrl}analyze/${uuid}/keypoints`).toPromise();
+            const response = await this.http.get<Record<number, number[][]>>(`${this.apiUrl}analyze/${uuid}/keypoints`).toPromise();//TODO: aggiungere caricamento
             if(response)
                 this.keypointsData = response;
             else 
@@ -55,11 +76,33 @@ export class VideoCaptureService {
     }
 
     // Metodo per gestire i risultati del rilevamento pose
-    private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, frameNumber: number): void {
+    private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, frameNumber: number, uuid: string): void {
         if (results.landmarks) {
+            const filteredLandmarks: FilteredLandmark[] = [];
+
+            // Itera sui keypoints del primo set di landmarks
+            results.landmarks[0].forEach((kp: Landmark, index: number) => {
+                // Controlla se l'indice corrisponde a uno dei keypoints che vuoi analizzare
+                filteredLandmarks.push({
+                    index: index, // Usa l'indice corrente
+                    x: kp.x,
+                    y: kp.y,
+                    z: kp.z,
+                    visibility: kp.visibility
+                });
+                
+            });
+
+            console.log("frameNumber: " + frameNumber);
+        
+            // Inviare i keypoints filtrati al servizio WebSocket
+            if(filteredLandmarks && frameNumber && uuid)
+                this.webSocketStreamService.sendLandmarks(filteredLandmarks, frameNumber, uuid);
+            
             console.log('Pose landmarks:', results.landmarks);
             if (isPlatformBrowser(this.platformId)) {
                 if(canvasElement){
+
                     const canvasCtx = canvasElement.getContext('2d');
 
                     // Imposta dimensioni del canvas
@@ -72,10 +115,24 @@ export class VideoCaptureService {
                         canvasCtx?.drawImage(videoElement, 0, 0);
                         const drawingUtils = new DrawingUtils(canvasCtx);
                         for (const landmark of results.landmarks) {
+                      
                             drawingUtils.drawLandmarks(landmark, {
                             radius: (data) => DrawingUtils.lerp(data.from!.z, -0.15, 0.1, 5, 1)
                             });
-                            drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
+                            console.log("Received socket data:", this.socketData);
+                            if(Array.isArray(this.socketData)){
+                                for (const data  of this.socketData) {
+                                    // Disegna solo le connessioni per il frame corrente
+                                    //if (frameNumber === data.frame_number) {
+                                        const connectionObj = { start: data.connection[0], end: data.connection[1] }; // Indici dei landmark
+
+                                        // Disegna la connessione tra i landmark con il colore corretto
+                                        drawingUtils.drawConnectors(landmark, [connectionObj], {color: data.color});
+                                    //}
+                                    //else
+                                        //console.error("frameNumber è diverso: " + data.frame_number);
+                                }
+                            }
                         }
 
                         if (this.keypointsData[frameNumber]) {
@@ -127,12 +184,21 @@ export class VideoCaptureService {
     }
 
     // Metodo per avviare lo streaming video e rilevare pose
-    async startVideo(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, uuid: string): Promise<void> {
+    async startVideo(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, uuid: string, fps: number): Promise<void> {
         try {
             // Recupera i keypoints dal server prima di iniziare il video
             await this.fetchKeypoints(uuid);
-
-            this.videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            this.subscribeToKeypoints(); // Sottoscrivi ai dati ricevuti dal WebSocket
+            // Configura le constraint per getUserMedia
+            const constraints = {
+                video: {
+                    facingMode: 'user', // Imposta la telecamera frontale
+                    width: { ideal: videoElement.width },
+                    height: { ideal: videoElement.height },
+                    frameRate: { ideal: fps } // Imposta la frequenza dei frame
+                }
+            };
+            this.videoStream = await navigator.mediaDevices.getUserMedia(constraints);
             videoElement.srcObject = this.videoStream;
 
             if (!this.poseLandmarker) {
@@ -146,7 +212,7 @@ export class VideoCaptureService {
                     try{
                         const imageBitmap = await createImageBitmap(videoElement);
                         const results = this.poseLandmarker.detectForVideo(imageBitmap, performance.now());
-                        this.onResults(results, videoElement, canvasElement, frameCount);  // Gestisci i risultati
+                        this.onResults(results, videoElement, canvasElement, frameCount, uuid);  // Gestisci i risultati
                         frameCount++;
                         imageBitmap.close();  // Rilascia memoria bitmap
                     }

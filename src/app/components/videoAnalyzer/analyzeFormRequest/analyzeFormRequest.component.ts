@@ -20,6 +20,7 @@ import { Router } from '@angular/router';
 export class VideoAnalyzerComponent {
   selectedFile: File | null = null;
   serverResponse: string = '';
+  serverResponseDetail: string = '';
   showPopup: boolean = false;
 
   // Configurazione degli input
@@ -45,6 +46,15 @@ export class VideoAnalyzerComponent {
   ];
 
   constructor(private readonly videoAnalyzerService: VideoAnalyzerService, private router: Router) {}
+
+  ngOnInit() {
+    // Sottoscrivi all'evento di messaggio ricevuto
+    this.videoAnalyzerService.messageReceived.subscribe((message: any) => {
+      this.serverResponse = message.message;
+      this.serverResponseDetail = message.detail;
+      this.showPopup = true; // Mostra il popup quando arriva un messaggio
+    });
+  }
 
 
     
@@ -82,6 +92,8 @@ export class VideoAnalyzerComponent {
       this.videoAnalyzerService.analyzeVideo(this.selectedFile, area, portions,  description? description as string: '').subscribe({
         next: (response) => {
           this.serverResponse = response.message;
+          if(response.detail)
+            this.videoAnalyzerService.connectToSocket(response.detail)
           this.showPopup = true;
         },
         error: (error: HttpErrorResponse) => {

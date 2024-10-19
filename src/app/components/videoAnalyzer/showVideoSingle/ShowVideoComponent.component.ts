@@ -95,7 +95,6 @@ export class ShowVideoComponent implements OnInit {
 
     initializeCastApi() {
         console.log("enter")
-        console.log(chrome.cast.isAvailable);
         if (chrome && chrome.cast && chrome.cast.isAvailable) {
         this.setupCast();
         } else {

@@ -6,6 +6,6 @@
 
 
 <!-- Mostra il popup se `showPopup` è true -->
-<app-popUp *ngIf="showPopup" [message]="serverResponse" (close)="onClosePopup()"></app-popUp>
+<app-popUp *ngIf="showPopup" [message]="serverResponse" [detail]="serverResponseDetail" (close)="onClosePopup()"></app-popUp>
 
 <app-footer></app-footer>
