@@ -7,6 +7,8 @@ import { VgControlsModule } from '@videogular/ngx-videogular/controls';
 import { VgOverlayPlayModule} from '@videogular/ngx-videogular/overlay-play';
 import { VgBufferingModule } from '@videogular/ngx-videogular/buffering';
 import { Router } from '@angular/router';
+import { PopUpComponent } from "../../common/popUpResponse/popUp.component";
+import { VideoStateService } from "../../../services/VideoCaptureService/VideoStateService";
 
 declare let cast: any;
 declare let chrome: any;
@@ -20,7 +22,7 @@ declare global {
 @Component({
   selector: 'app-show-video',
   standalone: true,
-  imports: [CommonModule,  VgControlsModule, VgCoreModule, VgOverlayPlayModule, VgBufferingModule],
+  imports: [CommonModule,  VgControlsModule, VgCoreModule, VgOverlayPlayModule, VgBufferingModule, PopUpComponent],
   templateUrl: './ShowVideoComponent.component.html',
 })
 export class ShowVideoComponent implements OnInit {
@@ -28,6 +30,7 @@ export class ShowVideoComponent implements OnInit {
     video: any; // Video da mostrare
     videoUrl: string = '';
     serverResponse: string = '';
+    serverResponseDetail: string = '';
     showPopup: boolean = false;
     media: string = "video/mp4";
     preload: string = "auto";
@@ -40,6 +43,7 @@ export class ShowVideoComponent implements OnInit {
         private readonly http: HttpClient,
         @Inject(PLATFORM_ID) private platformId: Object,
         private readonly router: Router,
+        private readonly videoStateService: VideoStateService, // Usa il servizio di stato
     ) {}
 
     ngOnInit() {
@@ -80,6 +84,7 @@ export class ShowVideoComponent implements OnInit {
                 this.video = video;
                 this.videoUrl = `http://localhost:8000/videos/${this.video.uuid}${this.video.format}`;
                 console.log(video);
+                this.videoStateService.setVideo(video);
             },
             error: (error: HttpErrorResponse) => {
             console.error('Errore nel recuperare il video:', error);
@@ -151,6 +156,10 @@ export class ShowVideoComponent implements OnInit {
     }
     navigateTo(link: string) {
         this.router.navigate(['/'+link])
+    }
+
+    onClosePopup(): void {
+        this.showPopup = false;
     }
 
 }

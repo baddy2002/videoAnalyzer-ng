@@ -69,4 +69,7 @@
     <a [href]="'http://localhost:8000/analyze/' + video?.name + '/streaming'" download class="mt-2 inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition duration-200">
         Download Video
     </a>
+    
 </div>
+<app-popUp *ngIf="showPopup" [message]="serverResponse" [detail]="serverResponseDetail" (close)="onClosePopup()"></app-popUp>
+

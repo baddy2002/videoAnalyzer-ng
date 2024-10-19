@@ -1,4 +1,4 @@
-import { Component, EventEmitter } from '@angular/core';
+import { Component } from '@angular/core';
 import { VideoAnalyzerService } from './analyzeFormRequest.service';
 import { FormsModule } from '@angular/forms';
 import { PopUpComponent } from '../../common/popUpResponse/popUp.component';
@@ -45,7 +45,7 @@ export class VideoAnalyzerComponent {
     { type: 'text', id: 'description', name: 'description', ngModel: '', required: true, inputClass: "mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",isFileInput: false},
   ];
 
-  constructor(private readonly videoAnalyzerService: VideoAnalyzerService, private router: Router) {}
+  constructor(private readonly videoAnalyzerService: VideoAnalyzerService, private readonly router: Router) {}
 
   ngOnInit() {
     // Sottoscrivi all'evento di messaggio ricevuto

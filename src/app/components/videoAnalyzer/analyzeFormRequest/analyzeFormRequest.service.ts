@@ -6,8 +6,8 @@ import { Observable } from 'rxjs';
   providedIn: 'root', 
 })
 export class VideoAnalyzerService {
-  private apiUrl = 'http://localhost:8000/analyze/';
-  private apiSocketUrl = 'ws://localhost:8000/analyze/upload_video';
+  private readonly apiUrl = 'http://localhost:8000/analyze/';
+  private readonly apiSocketUrl = 'ws://localhost:8000/analyze/upload_video';
   private socket: WebSocket | null = null;
   messageReceived: EventEmitter<any> = new EventEmitter();
   http = inject(HttpClient)

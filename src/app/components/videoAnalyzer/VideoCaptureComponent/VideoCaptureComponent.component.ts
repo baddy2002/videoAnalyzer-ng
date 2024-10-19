@@ -2,6 +2,8 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Inject, PLATFORM_ID } from '@angular/core';
 import { VideoCaptureService } from '../../../services/VideoCaptureService/VideoCaptureService.service';
 import { ActivatedRoute } from '@angular/router';  
+import { VideoStateService } from '../../../services/VideoCaptureService/VideoStateService';
+import { Subscription } from 'rxjs';
 
 
 @Component({
@@ -14,17 +16,20 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
     @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>; // Usa ! per evitare il controllo di null  
     @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
 
-    // Nuove proprietà per altezza, larghezza e fps
+    // i valori li otterrai dal servizio
     videoWidth: number = 1920; // Imposta un valore di larghezza predefinito
     videoHeight: number = 1080;  // Imposta un valore di altezza predefinito
-    videoFPS: number = 30;       // Imposta un valore di FPS predefinito
+    videoFPS!: number;
+    private videoSubscription!: Subscription; // sottoscrizione al video per ottenere i dati dalla pagina precedente
 
     private uuid: string = '';
 
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object, 
-        private videoCaptureService: VideoCaptureService,
-        private route : ActivatedRoute,
+        private readonly videoCaptureService: VideoCaptureService,
+        private readonly route : ActivatedRoute,
+        private readonly videoStateService: VideoStateService, // Inietta il servizio VideoStateService
+
     ) {} // Inietta il servizio
   
     ngOnInit(): void {
@@ -32,7 +37,13 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
           // Estrai l'UUID dal path dell'URL
           this.route.paramMap.subscribe(params => {
             this.uuid = params.get('uuid') || '';  // Recupera l'uuid dal path
-            this.startVideo();  // Avvia il video solo dopo aver ottenuto l'uuid
+
+            this.videoSubscription = this.videoStateService.getVideo().subscribe(video => {
+              if (video) {
+                this.videoFPS = video.fps;
+                this.startVideo();  // Avvia il video solo dopo aver ottenuto i dati
+              }
+            });
           });
         }
     }
@@ -48,7 +59,11 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
               this.videoElement.nativeElement.width = this.videoWidth; // Imposta larghezza video
               this.videoElement.nativeElement.height = this.videoHeight; // Imposta altezza video
             
-                this.videoCaptureService.startVideo(this.videoElement.nativeElement, this.canvasElement.nativeElement, this.uuid, this.videoFPS); // Usa il servizio per avviare il video
+                this.videoCaptureService.startVideo(
+                  this.videoElement.nativeElement,
+                  this.canvasElement.nativeElement, 
+                  this.uuid, 
+                  this.videoFPS); // Usa il servizio per avviare il video
             }
     }
 
