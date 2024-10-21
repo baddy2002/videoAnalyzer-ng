@@ -19,6 +19,8 @@ export class VideoCaptureService {
     private apiUrl = 'http://localhost:8000/'
     private keypointsSubscription: Subscription | null = null; // Aggiungi una subscription
     private socketData: any = null;
+    private retry: number = 0;
+
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object,
         private webSocketStreamService: WebSocketStreamService,
@@ -127,7 +129,12 @@ export class VideoCaptureService {
                                         const connectionObj = { start: data.connection[0], end: data.connection[1] }; // Indici dei landmark
 
                                         // Disegna la connessione tra i landmark con il colore corretto
-                                        drawingUtils.drawConnectors(landmark, [connectionObj], {color: data.color});
+                                        drawingUtils.drawConnectors(landmark,
+                                             [connectionObj], 
+                                            {
+                                                color: data.color,
+                                                lineWidth: 5
+                                            });
                                     //}
                                     //else
                                         //console.error("frameNumber è diverso: " + data.frame_number);
@@ -171,7 +178,7 @@ export class VideoCaptureService {
                                     canvasCtx?.moveTo(startX, startY);
                                     canvasCtx?.lineTo(endX, endY);
                                     canvasCtx.strokeStyle = 'blue'; // Colore per connessioni del server
-                                    canvasCtx.lineWidth = 2;
+                                    canvasCtx.lineWidth = 5;
                                     canvasCtx?.stroke();
                                 }
                             }
@@ -208,19 +215,43 @@ export class VideoCaptureService {
             let frameCount = 0;
 
             const processFrame = async () => {
-                if (this.poseLandmarker && videoElement && videoElement.videoWidth && videoElement.videoHeight) {
+                console.log("trying to create img with width: " + videoElement.videoWidth + " height: " + videoElement.videoHeight);
+                if (this.poseLandmarker && videoElement && videoElement.videoWidth && videoElement.videoHeight && videoElement.readyState >= 2) {
                     try{
-                        const imageBitmap = await createImageBitmap(videoElement);
-                        const results = this.poseLandmarker.detectForVideo(imageBitmap, performance.now());
-                        this.onResults(results, videoElement, canvasElement, frameCount, uuid);  // Gestisci i risultati
-                        frameCount++;
-                        imageBitmap.close();  // Rilascia memoria bitmap
+                        const imageBitmap = await createImageBitmap(
+                            videoElement,  // Sorgente (il video)
+                            0, 0,          // sx, sy: coordinate dell'angolo in alto a sinistra
+                            this.approximateToDecine(videoElement.videoWidth),  // sw: larghezza del ritaglio (qui usi tutta la larghezza)
+                            this.approximateToDecine(videoElement.videoHeight)  // sh: altezza del ritaglio (qui usi tutta l'altezza)
+                        );
+                        try{
+                            const results = this.poseLandmarker.detectForVideo(imageBitmap, performance.now());
+                            this.onResults(results, videoElement, canvasElement, frameCount, uuid);  // Gestisci i risultati
+                            frameCount++;
+                            imageBitmap.close();  // Rilascia memoria bitmap
+                        } catch(error: any){
+                            console.error('Verifica i parametri:', {
+                                imageBitmap: imageBitmap,
+                                timestamp: performance.now(),
+                                poseLandmarker: this.poseLandmarker,
+                            });
+                        }
+
                     }
-                    catch(error){
-                        console.error('Errore durante la creazione dell\'imageBitmap:', error);
+                    catch(error: any){
+                        console.error('Errore durante la creazione dell\'imageBitmap:', error.message);
+                        
+                        this.retry++;
+                        if (this.retry < 10) {
+                            setTimeout(() => {
+                                requestAnimationFrame(processFrame);
+                            }, 100); // Ritardo di 100ms prima di ritentare
+                            return;
+                        }
                     }
                 }
-                requestAnimationFrame(processFrame); // Richiama il frame successivo
+                if(this.retry<10)
+                    requestAnimationFrame(processFrame); // Richiama il frame successivo
             };
 
             requestAnimationFrame(processFrame); // Avvia l'elaborazione del video frame
@@ -229,6 +260,9 @@ export class VideoCaptureService {
         }
     }
 
+    approximateToDecine(value: number): number {
+        return Math.round(value / 10) * 10;
+    }
   // Metodo per fermare lo streaming video
   async stopVideo(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement): Promise<void> {
     if (this.videoStream) {

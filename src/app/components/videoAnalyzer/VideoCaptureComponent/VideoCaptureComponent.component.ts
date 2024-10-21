@@ -11,14 +11,15 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './VideoCaptureComponent.component.html',
+  styleUrl: './VideoCaptureComponent.component.css'
 })
 export class VideoCaptureComponent implements OnInit, OnDestroy {
     @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>; // Usa ! per evitare il controllo di null  
     @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
 
     // i valori li otterrai dal servizio
-    videoWidth: number = 1920; // Imposta un valore di larghezza predefinito
-    videoHeight: number = 1080;  // Imposta un valore di altezza predefinito
+    videoWidth!: number; // Imposta un valore di larghezza predefinito
+    videoHeight!: number;  // Imposta un valore di altezza predefinito
     videoFPS!: number;
     private videoSubscription!: Subscription; // sottoscrizione al video per ottenere i dati dalla pagina precedente
 
@@ -40,7 +41,11 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
 
             this.videoSubscription = this.videoStateService.getVideo().subscribe(video => {
               if (video) {
+                this.videoWidth = video.width;
+                this.videoHeight = video.height;
+
                 this.videoFPS = video.fps;
+                console.log("width: " + this.videoWidth + "  height: " + this.videoHeight + " fps: " + this.videoFPS);
                 this.startVideo();  // Avvia il video solo dopo aver ottenuto i dati
               }
             });
@@ -58,7 +63,8 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
             if(this.videoElement && this.canvasElement){
               this.videoElement.nativeElement.width = this.videoWidth; // Imposta larghezza video
               this.videoElement.nativeElement.height = this.videoHeight; // Imposta altezza video
-            
+              this.canvasElement.nativeElement.width = this.videoWidth;
+              this.canvasElement.nativeElement.height = this.videoHeight;
                 this.videoCaptureService.startVideo(
                   this.videoElement.nativeElement,
                   this.canvasElement.nativeElement, 
