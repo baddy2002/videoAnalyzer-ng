@@ -7,8 +7,8 @@ import { environment } from '../../../../config/environment';
   providedIn: 'root', 
 })
 export class VideoAnalyzerService {
-  private readonly apiUrl =  environment.apiUrl+'/analyze/';
-  private readonly apiSocketUrl = environment.apiUrlWs+'/analyze/upload_video';
+  private readonly apiUrl =  environment.apiUrl+'analyze/';
+  private readonly apiSocketUrl = environment.apiUrlWs+'analyze/upload_video';
   private socket: WebSocket | null = null;
   messageReceived: EventEmitter<any> = new EventEmitter();
   http = inject(HttpClient)

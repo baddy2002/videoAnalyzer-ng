@@ -27,7 +27,7 @@ declare global {
   templateUrl: './ShowVideoComponent.component.html',
 })
 export class ShowVideoComponent implements OnInit {
-    apiUrl = environment.apiUrl+'/analyze/';
+    apiUrl = environment.apiUrl+'analyze/';
     video: any; // Video da mostrare
     videoUrl: string = '';
     serverResponse: string = '';
