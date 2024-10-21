@@ -28,7 +28,7 @@
       <video [vgMedia]="$any(media)"
             #media id="singleVideo"
             preload="auto"
-            [src]="'http://localhost:8000/analyze/' + video?.name + '/streaming'"
+            [src]="apiUrl + video?.name + '/streaming'"
             [poster]="'data:image/png;base64,'+video?.thumbnail"
             crossorigin="use-credentials"
       >
@@ -66,7 +66,7 @@
         Confronta
     </a>
 
-    <a [href]="'http://localhost:8000/analyze/' + video?.name + '/streaming'" download class="mt-2 inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition duration-200">
+    <a [href]="apiUrl + video?.name + '/streaming'" download class="mt-2 inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition duration-200">
         Download Video
     </a>
     

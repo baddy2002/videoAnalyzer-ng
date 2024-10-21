@@ -6,6 +6,7 @@ import { error } from 'console';
 import { WebSocketStreamService } from '../WebSocketStreamService/WebSocketStreamService';
 import { FilteredLandmark, Landmark } from '../../model/Landmark';
 import { Subscription } from 'rxjs';
+import { environment } from '../../../config/environment';
 
 
 @Injectable({
@@ -16,7 +17,7 @@ export class VideoCaptureService {
     private videoStream: MediaStream | null = null;
     private lastFrame: string | null = null;
     private keypointsData: Record<number, number[][]> = {}; // Struttura per memorizzare i keypoints
-    private apiUrl = 'http://localhost:8000/'
+    private readonly apiUrl = environment.apiUrl
     private keypointsSubscription: Subscription | null = null; // Aggiungi una subscription
     private socketData: any = null;
     private retry: number = 0;

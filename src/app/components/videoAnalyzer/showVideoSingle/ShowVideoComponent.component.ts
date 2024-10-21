@@ -9,6 +9,7 @@ import { VgBufferingModule } from '@videogular/ngx-videogular/buffering';
 import { Router } from '@angular/router';
 import { PopUpComponent } from "../../common/popUpResponse/popUp.component";
 import { VideoStateService } from "../../../services/VideoCaptureService/VideoStateService";
+import { environment } from "../../../../config/environment";
 
 declare let cast: any;
 declare let chrome: any;
@@ -26,7 +27,7 @@ declare global {
   templateUrl: './ShowVideoComponent.component.html',
 })
 export class ShowVideoComponent implements OnInit {
-    private readonly apiUrl = 'http://localhost:8000/analyze/';
+    apiUrl = environment.apiUrl+'/analyze/';
     video: any; // Video da mostrare
     videoUrl: string = '';
     serverResponse: string = '';
@@ -36,7 +37,6 @@ export class ShowVideoComponent implements OnInit {
     preload: string = "auto";
     api: VgApiService = new VgApiService();
     isCastAvailable: boolean = false;
-
 
     constructor(
         private readonly route: ActivatedRoute,
@@ -82,7 +82,7 @@ export class ShowVideoComponent implements OnInit {
         this.http.get(`${this.apiUrl}${uuid}`).subscribe({
             next: (video) => {
                 this.video = video;
-                this.videoUrl = `http://localhost:8000/videos/${this.video.uuid}${this.video.format}`;
+                this.videoUrl = environment.apiUrl+`/videos/${this.video.uuid}${this.video.format}`;
                 console.log(video);
                 this.videoStateService.setVideo(video);
             },

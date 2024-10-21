@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { environment } from '../../../config/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebSocketStreamService {
   private socket!: WebSocket;
-  private readonly serverUrl: string = 'ws://localhost:8000/confrontation/keypoints_stream'; // Cambia con l'URL del tuo server WebSocket
+  private readonly serverUrl: string = environment.apiUrlWs+'confrontation/keypoints_stream'; // Cambia con l'URL del tuo server WebSocket
 
   // Subject per inviare i dati al VideoCaptureService
   public keypointsSubject = new Subject<any>();

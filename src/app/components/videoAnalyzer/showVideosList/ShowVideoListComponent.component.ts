@@ -4,6 +4,7 @@ import { HeaderComponent } from "../../common/header/header.component";
 import { FooterComponent } from "../../common/footer/footer.component";
 import { HttpClient, HttpErrorResponse } from "@angular/common/http";
 import { ListComponent } from "../../common/list/ListComponent.component";
+import { environment } from "../../../../config/environment";
 
 @Component({
   selector: 'app-video-analyzer',
@@ -13,7 +14,7 @@ import { ListComponent } from "../../common/list/ListComponent.component";
 })
 export class ShowVideoListComponent implements OnInit{
     
-    private readonly apiUrl = 'http://localhost:8000/analyze/';
+    private readonly apiUrl = environment.apiUrl+'analyze/';
     videoList: any[] = [];
     itemsPerPage=5;
     totalItems: number = 0;
