@@ -1,6 +1,7 @@
 
 
 export const environment = {
-  apiUrl: process.env['API_URL'] ?? 'http://localhost:8000/',
-  apiUrlWs: process.env['API_URL_WS'] ?? 'ws://localhost:8000/',
+    production: false,
+  apiUrl: 'http://localhost:8000/',
+  apiUrlWs: 'ws://localhost:8000/',
 };
