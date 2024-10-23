@@ -8,6 +8,8 @@ import { HelpComponent } from './components/videoAnalyzer/help/HelpComponent.com
 import { ShowVideoListComponent } from './components/videoAnalyzer/showVideosList/ShowVideoListComponent.component';
 import { ShowVideoComponent } from './components/videoAnalyzer/showVideoSingle/ShowVideoComponent.component';
 import { VideoCaptureComponent } from './components/videoAnalyzer/VideoCaptureComponent/VideoCaptureComponent.component';
+import { ShowElaborationListComponent } from './components/videoAnalyzer/showElaborationList/ShowElaborationListComponent.component';
+import { ShowElaborationComponent } from './components/videoAnalyzer/showElaborationSingle/ShowElaborationComponent.component';
 
 @Injectable({ providedIn: 'root' })
 export class AuthGuard implements CanActivate {
@@ -25,4 +27,6 @@ export const routes: Routes = [
     {path: 'videos/:uuid', component: ShowVideoComponent},
     {path: 'videos/:uuid/confront', component: VideoCaptureComponent},
     {path: 'analyze', component: VideoAnalyzerComponent, canActivate: [AuthGuard]},
+    {path: 'videos/:video_uuid/confront/history', component: ShowElaborationListComponent},
+    {path: 'videos/:video_uuid/confront/history/:uuid', component: ShowElaborationComponent},
 ];

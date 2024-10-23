@@ -41,7 +41,7 @@ export class ListComponent implements OnInit {
       this.paginatedItems = [];
       return;
     }
-    console.log(this.paginatedItems);
+    //console.log(this.paginatedItems);
     const start = (this.currentPage - 1) * this.itemsPerPage;
     const end = start + this.itemsPerPage;
     this.paginatedItems = this.items;

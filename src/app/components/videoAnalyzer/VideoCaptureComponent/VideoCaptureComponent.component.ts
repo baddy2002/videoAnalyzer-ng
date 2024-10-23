@@ -1,7 +1,7 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Inject, PLATFORM_ID } from '@angular/core';
 import { VideoCaptureService } from '../../../services/VideoCaptureService/VideoCaptureService.service';
-import { ActivatedRoute } from '@angular/router';  
+import { ActivatedRoute, Router } from '@angular/router';  
 import { VideoStateService } from '../../../services/VideoCaptureService/VideoStateService';
 import { Subscription } from 'rxjs';
 
@@ -23,14 +23,14 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
     videoFPS!: number;
     private videoSubscription!: Subscription; // sottoscrizione al video per ottenere i dati dalla pagina precedente
 
-    private uuid: string = '';
+    uuid: string = '';
 
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object, 
         private readonly videoCaptureService: VideoCaptureService,
         private readonly route : ActivatedRoute,
         private readonly videoStateService: VideoStateService, // Inietta il servizio VideoStateService
-
+        private readonly router: Router,
     ) {} // Inietta il servizio
   
     ngOnInit(): void {
@@ -46,7 +46,7 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
 
                 this.videoFPS = video.fps;
                 console.log("width: " + this.videoWidth + "  height: " + this.videoHeight + " fps: " + this.videoFPS);
-                this.startVideo();  // Avvia il video solo dopo aver ottenuto i dati
+                //this.startVideo();  // Avvia il video solo dopo aver ottenuto i dati
               }
             });
           });
@@ -85,5 +85,10 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
         return this.videoCaptureService.getLastFrame(); // Ottieni l'ultimo frame dal servizio
         }
         return null;
+    }
+
+    navigateTo(link: string) {
+      console.log("navigate to: " + link);
+      this.router.navigate(['/'+link])
     }
   }

@@ -79,7 +79,7 @@ export class VideoCaptureService {
     }
 
     // Metodo per gestire i risultati del rilevamento pose
-    private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, frameNumber: number, uuid: string): void {
+    private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, frameNumber: number, uuid: string, is_mirrored: boolean): void {
         if (results.landmarks) {
             const filteredLandmarks: FilteredLandmark[] = [];
 
@@ -100,7 +100,7 @@ export class VideoCaptureService {
         
             // Inviare i keypoints filtrati al servizio WebSocket
             if(filteredLandmarks && frameNumber && uuid)
-                this.webSocketStreamService.sendLandmarks(filteredLandmarks, frameNumber, uuid);
+                this.webSocketStreamService.sendLandmarks(filteredLandmarks, frameNumber, uuid, is_mirrored);
             
             console.log('Pose landmarks:', results.landmarks);
             if (isPlatformBrowser(this.platformId)) {
@@ -198,6 +198,10 @@ export class VideoCaptureService {
             await this.fetchKeypoints(uuid);
             this.subscribeToKeypoints(); // Sottoscrivi ai dati ricevuti dal WebSocket
             // Configura le constraint per getUserMedia
+            let is_mirrored: boolean | null = null
+            if (videoElement && canvasElement)
+                is_mirrored = await this.openPopUp();
+
             const constraints = {
                 video: {
                     facingMode: 'user', // Imposta la telecamera frontale
@@ -219,23 +223,25 @@ export class VideoCaptureService {
                 console.log("trying to create img with width: " + videoElement.videoWidth + " height: " + videoElement.videoHeight);
                 if (this.poseLandmarker && videoElement && videoElement.videoWidth && videoElement.videoHeight && videoElement.readyState >= 2) {
                     try{
-                        const imageBitmap = await createImageBitmap(
-                            videoElement,  // Sorgente (il video)
-                            0, 0,          // sx, sy: coordinate dell'angolo in alto a sinistra
-                            this.approximateToDecine(videoElement.videoWidth),  // sw: larghezza del ritaglio (qui usi tutta la larghezza)
-                            this.approximateToDecine(videoElement.videoHeight)  // sh: altezza del ritaglio (qui usi tutta l'altezza)
-                        );
+                        
                         try{
-                            const results = this.poseLandmarker.detectForVideo(imageBitmap, performance.now());
-                            this.onResults(results, videoElement, canvasElement, frameCount, uuid);  // Gestisci i risultati
+                            if(frameCount%5==0) {
+                                const imageBitmap = await createImageBitmap(
+                                    videoElement,  // Sorgente (il video)
+                                    0, 0,          // sx, sy: coordinate dell'angolo in alto a sinistra
+                                    this.approximateToDecine(videoElement.videoWidth),  // sw: larghezza del ritaglio (qui usi tutta la larghezza)
+                                    this.approximateToDecine(videoElement.videoHeight)  // sh: altezza del ritaglio (qui usi tutta l'altezza)
+                                );
+                                const results = this.poseLandmarker.detectForVideo(imageBitmap, performance.now());
+                                //invio ogni 5 frame      
+                                this.onResults(results, videoElement, canvasElement, frameCount, uuid, is_mirrored || false);  // Gestisci i risultati
+                                imageBitmap.close();  // Rilascia memoria bitmap
+                            }
+                           
                             frameCount++;
-                            imageBitmap.close();  // Rilascia memoria bitmap
+                           
                         } catch(error: any){
-                            console.error('Verifica i parametri:', {
-                                imageBitmap: imageBitmap,
-                                timestamp: performance.now(),
-                                poseLandmarker: this.poseLandmarker,
-                            });
+                            console.error('Errore on processing frames:', error.message);
                         }
 
                     }
@@ -264,6 +270,84 @@ export class VideoCaptureService {
     approximateToDecine(value: number): number {
         return Math.round(value / 10) * 10;
     }
+
+    //metodo per aprire pop up e chiedere all'utente se vuole che il video sia specchiato o no
+    openPopUp(): Promise<boolean> {
+        return new Promise((resolve) => {
+            // Crea un overlay per oscurare lo schermo
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '9998';
+
+            // Crea il popup
+            const popup = document.createElement('div');
+            popup.style.position = 'fixed';
+            popup.style.top = '50%';
+            popup.style.left = '50%';
+            popup.style.transform = 'translate(-50%, -50%)';
+            popup.style.backgroundColor = '#fff';
+            popup.style.padding = '20px';
+            popup.style.borderRadius = '8px';
+            popup.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.2)';
+            popup.style.zIndex = '9999';
+
+            // Titolo
+            const title = document.createElement('h3');
+            title.innerText = 'Vuoi che il video sia confrontato in modalità specchiata?';
+            title.style.marginBottom = '10px';
+
+            // Checkbox
+            const checkboxLabel = document.createElement('label');
+            checkboxLabel.innerText = 'Specchiato';
+            checkboxLabel.style.marginRight = '10px';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.style.marginRight = '10px';
+
+            // Bottone di conferma
+            const confirmButton = document.createElement('button');
+            confirmButton.innerText = 'Conferma';
+            confirmButton.style.marginRight = '10px';
+
+            // Bottone di annullamento
+            const cancelButton = document.createElement('button');
+            cancelButton.innerText = 'Annulla';
+
+            // Eventi di conferma e annullamento
+            confirmButton.addEventListener('click', () => {
+                const isMirrored = checkbox.checked;
+                document.body.removeChild(popup);
+                document.body.removeChild(overlay);
+                resolve(isMirrored);  // Risolvi la promessa con il valore del checkbox
+            });
+
+            cancelButton.addEventListener('click', () => {
+                document.body.removeChild(popup);
+                document.body.removeChild(overlay);
+                resolve(false);  // Risolvi la promessa con 'false' se l'utente cancella
+            });
+
+            // Appendi gli elementi al popup
+            popup.appendChild(title);
+            popup.appendChild(checkboxLabel);
+            popup.appendChild(checkbox);
+            popup.appendChild(confirmButton);
+            popup.appendChild(cancelButton);
+
+            // Appendi il popup e l'overlay al body
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+        });
+}
+
+
+
   // Metodo per fermare lo streaming video
   async stopVideo(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement): Promise<void> {
     if (this.videoStream) {
