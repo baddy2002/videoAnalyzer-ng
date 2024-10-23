@@ -8,8 +8,9 @@ import { v4 as uuidv4 } from 'uuid'; // Importa il metodo per generare UUID
 })
 export class WebSocketStreamService {
   private socket!: WebSocket;
-  private readonly serverUrl: string = environment.apiUrlWs+'confrontation/keypoints_stream'; // Cambia con l'URL del tuo server WebSocket
-  private readonly elaboration_uuid: string = uuidv4(); // Genera un UUID unico
+  private readonly serverUrl: string = environment.apiUrlWs+'confrontation/keypoints_stream'; 
+  private readonly elaboration_uuid: string = uuidv4(); 
+  private isCompleted: boolean = false; // Variabile per tracciare lo stato di completamento
 
   // Subject per inviare i dati al VideoCaptureService
   public keypointsSubject = new Subject<any>();
@@ -30,8 +31,14 @@ export class WebSocketStreamService {
 
     this.socket.onmessage = (event) => {
       console.log('Message from server:', event.data);
-      this.keypointsSubject.next(JSON.parse(event.data));
-
+      const message = JSON.parse(event.data);
+      if (message.message === 'completed') {
+        console.log('Elaboration completed. Closing connection.');
+        this.isCompleted = true;
+        this.socket.close(); // Chiudi la connessione WebSocket
+      } else {
+        this.keypointsSubject.next(message);
+      }
     };
 
     this.socket.onerror = (error) => {
@@ -39,8 +46,12 @@ export class WebSocketStreamService {
     };
 
     this.socket.onclose = () => {
-      console.log('WebSocket connection closed, reconnecting...');
-      this.reconnect(); // Tenta la riconnessione
+        if (!this.isCompleted) {
+            console.log('WebSocket connection closed, reconnecting...');
+            this.reconnect(); // Tenta la riconnessione
+          } else {
+            console.log('WebSocket connection closed after completion. No reconnection will be attempted.');
+          }
     };
   }
 
@@ -53,6 +64,7 @@ export class WebSocketStreamService {
 
   // Metodo per inviare i landmarks
   public sendLandmarks(landmarks: any, frameNumber: number, uuid: string, is_mirrored: boolean): void {
+   
     if (this.socket.readyState === WebSocket.OPEN) {
       const data = {
         frameNumber: frameNumber,
@@ -60,6 +72,7 @@ export class WebSocketStreamService {
         landmarks: landmarks,
         is_mirrored: is_mirrored
       };
+      console.log("sending socket data: " + data)
       this.socket.send(JSON.stringify(data));
     } else {
       console.warn('WebSocket is not open. Unable to send data.');

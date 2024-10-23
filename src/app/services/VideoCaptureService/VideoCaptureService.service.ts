@@ -7,6 +7,7 @@ import { WebSocketStreamService } from '../WebSocketStreamService/WebSocketStrea
 import { FilteredLandmark, Landmark } from '../../model/Landmark';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../config/environment';
+import { ConnectionData } from '../../model/ConnectionData';
 
 
 @Injectable({
@@ -21,6 +22,9 @@ export class VideoCaptureService {
     private keypointsSubscription: Subscription | null = null; // Aggiungi una subscription
     private socketData: any = null;
     private retry: number = 0;
+    private videoElement!: HTMLVideoElement;
+    private fps: number = 0;
+    private allConnectionsGreen: Boolean = false;
 
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object,
@@ -80,6 +84,7 @@ export class VideoCaptureService {
 
     // Metodo per gestire i risultati del rilevamento pose
     private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, frameNumber: number, uuid: string, is_mirrored: boolean): void {
+        
         if (results.landmarks) {
             const filteredLandmarks: FilteredLandmark[] = [];
 
@@ -97,7 +102,7 @@ export class VideoCaptureService {
             });
 
             console.log("frameNumber: " + frameNumber);
-        
+
             // Inviare i keypoints filtrati al servizio WebSocket
             if(filteredLandmarks && frameNumber && uuid)
                 this.webSocketStreamService.sendLandmarks(filteredLandmarks, frameNumber, uuid, is_mirrored);
@@ -112,6 +117,8 @@ export class VideoCaptureService {
                     canvasElement.width = videoElement.videoWidth;
                     canvasElement.height = videoElement.videoHeight;
             
+                   
+
                     // Disegna il frame video
                     if (canvasCtx) {
                         canvasCtx?.clearRect(0, 0, canvasElement.width, canvasElement.height); // Pulisce il canvas prima di disegnare
@@ -123,26 +130,27 @@ export class VideoCaptureService {
                             radius: (data) => DrawingUtils.lerp(data.from!.z, -0.15, 0.1, 5, 1)
                             });
                             console.log("Received socket data:", this.socketData);
-                            if(Array.isArray(this.socketData)){
-                                for (const data  of this.socketData) {
-                                    // Disegna solo le connessioni per il frame corrente
-                                    //if (frameNumber === data.frame_number) {
-                                        const connectionObj = { start: data.connection[0], end: data.connection[1] }; // Indici dei landmark
 
-                                        // Disegna la connessione tra i landmark con il colore corretto
-                                        drawingUtils.drawConnectors(landmark,
-                                             [connectionObj], 
-                                            {
-                                                color: data.color,
-                                                lineWidth: 5
-                                            });
-                                    //}
-                                    //else
-                                        //console.error("frameNumber è diverso: " + data.frame_number);
+                            if(Array.isArray(this.socketData) && this.socketData.length > 0){
+                                if(this.socketData?.every((data: ConnectionData) => { data.color === "green"}))
+                                    this.allConnectionsGreen=true;
+                                for (const data  of this.socketData) {
+                                    const connectionObj = { start: data.connection[0], end: data.connection[1] }; // Indici dei landmark
+
+                                    // Disegna la connessione tra i landmark con il colore corretto
+                                    drawingUtils.drawConnectors(landmark,
+                                            [connectionObj], 
+                                        {
+                                            color: data.color,
+                                            lineWidth: 5
+                                        });
+                                    
+                                        
+
                                 }
                             }
                         }
-
+                        
                         if (this.keypointsData[frameNumber]) {
                             const keypoints = this.keypointsData[frameNumber];
     
@@ -188,6 +196,7 @@ export class VideoCaptureService {
                 }
 
             }
+
         }
     }
 
@@ -201,13 +210,13 @@ export class VideoCaptureService {
             let is_mirrored: boolean | null = null
             if (videoElement && canvasElement)
                 is_mirrored = await this.openPopUp();
-
+            this.fps = fps;
             const constraints = {
                 video: {
                     facingMode: 'user', // Imposta la telecamera frontale
                     width: { ideal: videoElement.width },
                     height: { ideal: videoElement.height },
-                    frameRate: { ideal: fps } // Imposta la frequenza dei frame
+                    frameRate: { ideal: this.fps } // Imposta la frequenza dei frame
                 }
             };
             this.videoStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -217,11 +226,12 @@ export class VideoCaptureService {
                 await this.initializePoseLandmarker(); // Inizializza il modello se non è ancora stato fatto
             }
 
-            let frameCount = 0;
+            let frameCount = 5;
+            this.videoElement = videoElement;
 
             const processFrame = async () => {
                 console.log("trying to create img with width: " + videoElement.videoWidth + " height: " + videoElement.videoHeight);
-                if (this.poseLandmarker && videoElement && videoElement.videoWidth && videoElement.videoHeight && videoElement.readyState >= 2) {
+                if (this.poseLandmarker && this.videoElement && this.videoElement.videoWidth && this.videoElement.videoHeight && this.videoElement.readyState >= 2) {
                     try{
                         
                         try{
@@ -237,8 +247,10 @@ export class VideoCaptureService {
                                 this.onResults(results, videoElement, canvasElement, frameCount, uuid, is_mirrored || false);  // Gestisci i risultati
                                 imageBitmap.close();  // Rilascia memoria bitmap
                             }
-                           
-                            frameCount++;
+                            if(this.allConnectionsGreen){
+                                console.log("every connections right for frame: " + frameCount )
+                                frameCount++;
+                            }
                            
                         } catch(error: any){
                             console.error('Errore on processing frames:', error.message);
@@ -265,6 +277,55 @@ export class VideoCaptureService {
         } catch (error) {
         console.error('Error accessing the camera:', error);
         }
+    }
+
+
+    drawSkeleton(frameNumber: number = 0, canvasElement: HTMLCanvasElement){
+        const canvasCtx = canvasElement.getContext('2d');
+        if(canvasCtx){
+            if (this.keypointsData[frameNumber]) {
+                const keypoints = this.keypointsData[frameNumber];
+    
+                // Disegna i keypoints del server
+                for (const keypoint of keypoints) {
+                    const index = keypoint[0]; // Indice del keypoint
+                    const x = keypoint[1] * canvasElement.width; // Converti in coordinate canvas
+                    const y = keypoint[2] * canvasElement.height; // Converti in coordinate canvas
+                    const confidence = keypoint[3]; // Affidabilità
+    
+                    // Disegna il keypoint se ha una certa affidabilità
+                    if (confidence > 0.5) {
+                        canvasCtx?.beginPath();
+                        canvasCtx?.arc(x, y, 5, 0, 2 * Math.PI);
+                        canvasCtx.fillStyle = 'blue'; // Colore per keypoints del server
+                        canvasCtx?.fill();
+                    }
+                }
+    
+                // Connessioni manuali per i keypoints del server
+                const connections = PoseLandmarker.POSE_CONNECTIONS; // Usa le stesse connessioni
+                for (const connection of connections) {
+                    const startKeypoint = keypoints.find(kp => kp[0] === connection.start);
+                    const endKeypoint = keypoints.find(kp => kp[0] === connection.end);
+    
+                    if (startKeypoint && endKeypoint) {
+                        const startX = startKeypoint[1] * canvasElement.width;
+                        const startY = startKeypoint[2] * canvasElement.height;
+                        const endX = endKeypoint[1] * canvasElement.width;
+                        const endY = endKeypoint[2] * canvasElement.height;
+    
+                        // Disegna la linea di connessione
+                        canvasCtx?.beginPath();
+                        canvasCtx?.moveTo(startX, startY);
+                        canvasCtx?.lineTo(endX, endY);
+                        canvasCtx.strokeStyle = 'blue'; // Colore per connessioni del server
+                        canvasCtx.lineWidth = 5;
+                        canvasCtx?.stroke();
+                    }
+                }
+            }
+        }
+
     }
 
     approximateToDecine(value: number): number {
