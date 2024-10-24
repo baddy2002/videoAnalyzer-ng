@@ -132,8 +132,11 @@ export class VideoCaptureService {
                             console.log("Received socket data:", this.socketData);
 
                             if(Array.isArray(this.socketData) && this.socketData.length > 0){
-                                if(this.socketData?.every((data: ConnectionData) => { data.color === "green"}))
+                                if(this.socketData?.every((data: ConnectionData) => data.color === "#00FF00")){
                                     this.allConnectionsGreen=true;
+                                    console.log("all connection are green");
+                                }
+                                
                                 for (const data  of this.socketData) {
                                     const connectionObj = { start: data.connection[0], end: data.connection[1] }; // Indici dei landmark
 
