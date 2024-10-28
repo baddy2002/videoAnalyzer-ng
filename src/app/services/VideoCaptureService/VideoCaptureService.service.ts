@@ -8,6 +8,7 @@ import { FilteredLandmark, Landmark } from '../../model/Landmark';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../config/environment';
 import { ConnectionData } from '../../model/ConnectionData';
+import { KeypointsStateService } from './KeypointsStateService';
 
 
 @Injectable({
@@ -26,10 +27,12 @@ export class VideoCaptureService {
     private fps: number = 0;
     private allConnectionsGreen: Boolean = false;
 
+    
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object,
         private webSocketStreamService: WebSocketStreamService,
-        private http: HttpClient
+        private http: HttpClient,
+        private readonly keypointsStateService: KeypointsStateService,
     ) {
         
     }
@@ -72,9 +75,11 @@ export class VideoCaptureService {
     // Nuovo metodo per recuperare i keypoints dal server
     async fetchKeypoints(uuid: string): Promise<void> {
         try {
-            const response = await this.http.get<Record<number, number[][]>>(`${this.apiUrl}analyze/${uuid}/keypoints`).toPromise();//TODO: aggiungere caricamento
-            if(response)
+            const response = await this.http.get<Record<number, number[][]>>(`${this.apiUrl}analyze/${uuid}/keypoints`).toPromise();
+            if(response){
                 this.keypointsData = response;
+                this.keypointsStateService.setKeypoints(this.keypointsData);
+            }
             else 
                 console.error("Response from server is undefined: " + response)
         } catch (error) {
@@ -288,7 +293,7 @@ export class VideoCaptureService {
         if(canvasCtx){
             if (this.keypointsData[frameNumber]) {
                 const keypoints = this.keypointsData[frameNumber];
-    
+                
                 // Disegna i keypoints del server
                 for (const keypoint of keypoints) {
                     const index = keypoint[0]; // Indice del keypoint
@@ -439,7 +444,7 @@ export class VideoCaptureService {
   // Metodo per ottenere l'immagine del canvas come stringa base64
   private getCanvasImage(canvasElement: HTMLCanvasElement): Promise<string | null> {
     return new Promise((resolve) => {
-        const canvas = canvasElement; // Assicurati di avere un modo per ottenere il canvas
+        const canvas = canvasElement;
         if (canvas) {
             const dataURL = canvas.toDataURL('image/png');
             resolve(dataURL);

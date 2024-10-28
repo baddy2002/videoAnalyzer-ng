@@ -1,6 +1,7 @@
 <div class="flex flex-col items-center justify-center p-4">
     <h1 class="text-2xl font-bold mb-4">{{ elaboration?.name }}</h1> <!-- Titolo del video -->
     <vg-player (onPlayerReady)="onPlayerReady($event)">
+        
         <vg-overlay-play></vg-overlay-play>
         <vg-buffering vgFor="singleVideo"></vg-buffering>
         <vg-scrub-bar>
@@ -18,24 +19,32 @@
         <vg-track-selector></vg-track-selector>
         <vg-mute></vg-mute>
         <vg-volume></vg-volume>
-        <vg-fullscreen></vg-fullscreen>
+        <a (click)="adjustCanvasDimensions()"><vg-fullscreen ></vg-fullscreen></a>
         
         <button class="cast-button text-white text-lg" (click)="startCasting()" [disabled]="!isCastAvailable" aria-label="Cast">
             <i class="fa fa-video-camera"></i> <!-- Icona di videocamera -->
         </button>
       </vg-controls>
 
-      <video [vgMedia]="$any(media)"
+      <video *ngIf="!detailFrame" #videoElement [vgMedia]="$any(media)"
             #media id="singleVideo"
             preload="auto"
             [src]="apiUrl + 'a/'+ elaboration?.name + '.' + elaboration?.format + '/streaming'"
             [poster]="'data:image/png;base64,'+elaboration?.thumbnail"
-            crossorigin="use-credentials"
       >
         browser non sopporta i video
       </video>
+      <canvas #canvasElement class="absolute top-0 left-0 w-full h-full"></canvas>
+      <video *ngIf="detailFrame" #videoElement [vgMedia]="$any(media)"
+      #media id="singleVideo"
+      preload="auto"
+      [src]="apiUrl + 'a/'+ elaboration?.name + '.' + elaboration?.format + '/streaming'"
+      [poster]="detailFrame"
+        >
+        browser non sopporta i video
+        </video>
     </vg-player>
-   
+    
     <p class="mt-4 text-lg text-gray-700 leading-relaxed text-center">{{ elaboration?.description }}</p>
 
     <div class="mt-6 p-4 bg-gray-100 rounded-lg shadow-md">
@@ -51,7 +60,9 @@
     <a (click)="navigateTo('/')" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition duration-200">
         GoHome
     </a>
-
+    <button (click)="view_details()">
+        Vedi dettaglio
+    </button>
 </div>
 <app-popUp *ngIf="showPopup" [message]="serverResponse" [detail]="serverResponseDetail" (close)="onClosePopup()"></app-popUp>
 
