@@ -234,7 +234,7 @@ export class VideoCaptureService {
                 await this.initializePoseLandmarker(); // Inizializza il modello se non è ancora stato fatto
             }
 
-            let frameCount = 5;
+            let frameCount = 25;        //saltare più o meno un secondo del video
             this.videoElement = videoElement;
 
             const processFrame = async () => {
