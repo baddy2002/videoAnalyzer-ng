@@ -47,7 +47,7 @@ export class ShowElaborationComponent implements OnInit {
     isCastAvailable: boolean = false;
     private frameCount: number = 5;
     private keypointsData: Record<number, number[][]> = {};
-    private userKeypointsData: FilteredLandmark[] =[];
+    private userKeypointsData:  FilteredLandmark[] =[];
     private keypointsSubscription!: Subscription; // sottoscrizione al video per ottenere i dati dalla pagina precedente
     private videoSubscription!: Subscription;
     private fps: number = 0;
@@ -55,8 +55,8 @@ export class ShowElaborationComponent implements OnInit {
     private uuid: string | null = "";
     private video_uuid: string| null = "";
     private elaborationFrame!: DetailFrame;
-    landmark_normalized: FilteredLandmark[] = [];
-    visitedKeypoints = new Set<number>();
+    private landmark_normalized: FilteredLandmark[] = [];
+    private visitedKeypoints = new Set<number>();
     detailFrame: string | null = null;
 
     constructor(
@@ -73,7 +73,7 @@ export class ShowElaborationComponent implements OnInit {
         // Ottieni l'UUID dal percorso della route
         this.uuid = this.route.snapshot.paramMap.get('uuid');
         this.video_uuid = this.route.snapshot.paramMap.get('video_uuid');
-        console.log("uuid: " + this.uuid)
+        console.log("uuid: " + this.uuid);
         if (this.uuid && this.video_uuid) {
         
             this.fetchElaboration(this.uuid, this.video_uuid);
@@ -94,7 +94,6 @@ export class ShowElaborationComponent implements OnInit {
 
     onPlayerReady(source: VgApiService){
         this.api = source;
-        console.log("onPlayerReady");
 
         this.api.getDefaultMedia().subscriptions.loadedMetadata.subscribe(
             this.autoplay.bind(this)
@@ -104,7 +103,6 @@ export class ShowElaborationComponent implements OnInit {
     }
 
     autoplay(){
-        console.log("play");
         
     }
 
@@ -129,8 +127,6 @@ export class ShowElaborationComponent implements OnInit {
 
 
     setupCast() {
-        console.log(cast.framework);
-        console.log(cast.framework.CastContext.getInstance());
         this.isCastAvailable = true;
         const castContext = cast.framework.CastContext.getInstance();
         castContext.setOptions({
@@ -181,25 +177,24 @@ export class ShowElaborationComponent implements OnInit {
     async view_details(){
 
         const currentTime = this.api.getDefaultMedia().currentTime;
-        console.log("curreentTime: ", currentTime)
-        console.log("keypoints: ", this.keypointsData)
-        console.log("fps: ", this.fps)
         if (this.keypointsData && this.fps){
             this.frameCount = Math.round(Math.floor(currentTime * this.fps) /5)*5;              //calcola frame divisibile per 5
             this.frameCount = (this.frameCount > 5 ? this.frameCount : 5); 
             await this.fetchElaborationFrame();
+
             this.calculateConnectionLengths();
             const canvasCtx = this.canvasElement.nativeElement.getContext('2d');
             if (canvasCtx && this.videoElement.nativeElement) {
                 canvasCtx.clearRect(0, 0, this.canvasElement.nativeElement.width, this.canvasElement.nativeElement.height); // Pulisce il canvas prima di disegnare
                 //canvasCtx.drawImage(this.videoElement.nativeElement, 0, 0, this.canvasElement.nativeElement.width, this.canvasElement.nativeElement.height); // Disegna il frame del video sul canvas
-                this.drawIncorrectKeypoints(canvasCtx);
-                this.drawCorrectKeypoints(this.frameCount, canvasCtx);   
+                console.log("keyData: ",this.keypointsData[this.frameCount])
+                this.drawCorrectKeypoints(this.frameCount, canvasCtx);  
+                console.log("userKeyData: " ,this.userKeypointsData); 
+                await this.drawIncorrectKeypoints(this.frameCount, canvasCtx);
             }
                
             
             this.detailFrame = this.getCanvasImage(this.canvasElement.nativeElement);
-            console.log(this.detailFrame);
 
             if (this.videoStream) {
                 this.videoStream.getTracks().forEach((track) => track.stop());
@@ -232,7 +227,8 @@ export class ShowElaborationComponent implements OnInit {
     private async drawCorrectKeypoints(frameNumber: number, canvasCtx: CanvasRenderingContext2D){
        
         let canvasElement: HTMLCanvasElement = this.canvasElement.nativeElement;
-        console.log(this.keypointsData[frameNumber])
+        //console.log("frameNumber: ", frameNumber);
+        //console.log(this.keypointsData[frameNumber])
         if (this.keypointsData[frameNumber]) {
             const keypoints = this.keypointsData[frameNumber];
 
@@ -277,10 +273,10 @@ export class ShowElaborationComponent implements OnInit {
         
     }
 
-    private async drawIncorrectKeypoints(canvasCtx: CanvasRenderingContext2D){
+    private async drawIncorrectKeypoints(frameNumber: number, canvasCtx: CanvasRenderingContext2D){
        
         let canvasElement: HTMLCanvasElement = this.canvasElement.nativeElement;
-        console.log(this.userKeypointsData)
+        //console.log(this.userKeypointsData)
         if (this.userKeypointsData) {
             const keypoints = this.userKeypointsData;
 
@@ -333,10 +329,9 @@ export class ShowElaborationComponent implements OnInit {
 
     async fetchElaborationFrame(): Promise<void> {
         try {
-            const response = await this.http.get<DetailFrame>(`${this.apiUrl}a/${this.video_uuid}/${this.uuid}/${this.frameCount}`).toPromise();
+            let response = await this.http.get<DetailFrame>(`${this.apiUrl}a/${this.video_uuid}/${this.uuid}/${this.frameCount}`).toPromise();
             if(response){
                 this.elaborationFrame = response;
-                console.log("elaboration frame");
                 console.log(this.elaborationFrame);
             }
             else 
@@ -350,9 +345,6 @@ export class ShowElaborationComponent implements OnInit {
         
         const connections = this.elaborationFrame.connections;
     
-        // Prendere le prime 5 connessioni
-        console.log("connections");
-        console.log(connections);
         // Calcolare le lunghezze delle connessioni
         const lengths = connections.map(connection => {
           // Verifica che gli indici siano validi
@@ -414,7 +406,7 @@ export class ShowElaborationComponent implements OnInit {
             let [startId, endId] = connection.connection;
             let isStartCurrent = startId === currentPoint.index;
             let isEndCurrent = endId === currentPoint.index;
-            
+            console.log("currentpoint: " , currentPoint.index);
             // Se la connessione coinvolge il punto corrente
             if (isStartCurrent || isEndCurrent) {
                 let nextPointId = isStartCurrent ? endId : startId;
@@ -423,8 +415,10 @@ export class ShowElaborationComponent implements OnInit {
                     let nextPoint = this.elaborationFrame.keypoints.find(
                         kp => kp.index === nextPointId
                     );
-                    let length = lengths.find(lenght => lenght.connection[0] == (isStartCurrent ? startId : endId) && lenght.connection[1] == nextPointId);
-                    console.log("Lenght: " , length);
+                    let length = lengths.find(lenght => 
+                        (lenght.connection[0] == (isStartCurrent ? startId : endId) && lenght.connection[1] == nextPointId) ||
+                        (lenght.connection[1] == (isStartCurrent ? startId : endId) && lenght.connection[0] == nextPointId));
+                    console.log("nextPoint: " , nextPointId)
                     if(nextPoint && length){
                         
                         // Calcola la nuova posizione del prossimo punto
@@ -447,17 +441,17 @@ export class ShowElaborationComponent implements OnInit {
         coefficient: number;
     }[]){
         const connections = this.elaborationFrame.connections;
-
+        this.landmark_normalized=[];
+        this.visitedKeypoints = new Set<number>()
         let startingPoint = null;
         for( let i = 0; i  <= connections.length; i++){
             startingPoint = this.elaborationFrame.keypoints.find(keypoint => keypoint.index === connections[i].connection[0]);
             
             if(startingPoint)
                 break;
-            console.log("i: " , i);
         }
         if(startingPoint){
-            console.log("starting point: ", startingPoint)
+            console.log("starting point: ", startingPoint);
         this.adjustKeypointPosition(startingPoint, lengths);
 
         // Salva le modifiche per il frame corrente
