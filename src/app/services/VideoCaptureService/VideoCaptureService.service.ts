@@ -90,7 +90,7 @@ export class VideoCaptureService {
     // Metodo per gestire i risultati del rilevamento pose
     private onResults(results: any, videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement, frameNumber: number, uuid: string, is_mirrored: boolean): void {
         
-        if (results.landmarks) {
+        if (results.landmarks && results.landmarks[0]) {
             const filteredLandmarks: FilteredLandmark[] = [];
 
             // Itera sui keypoints del primo set di landmarks

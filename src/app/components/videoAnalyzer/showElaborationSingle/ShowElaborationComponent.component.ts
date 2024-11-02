@@ -175,20 +175,33 @@ export class ShowElaborationComponent implements OnInit {
     }
 
     async view_details(){
-
+        
         const currentTime = this.api.getDefaultMedia().currentTime;
         if (this.keypointsData && this.fps){
             this.frameCount = Math.round(Math.floor(currentTime * this.fps) /5)*5;              //calcola frame divisibile per 5
             this.frameCount = (this.frameCount > 5 ? this.frameCount : 5); 
+
             await this.fetchElaborationFrame();
 
-            this.calculateConnectionLengths();
+            const lengths: {
+                connection: number[];
+                lenght: number;
+                coefficient: number;
+            }[] | undefined  = await new Promise(resolve => {
+                const calculatedLengths = this.calculateConnectionLengths();
+                resolve(calculatedLengths);
+            });
+            
+            if (lengths) {
+                //this.normalizeKeypoints(lengths);
+                this.userKeypointsData = this.elaborationFrame.keypoints;
+            }
             const canvasCtx = this.canvasElement.nativeElement.getContext('2d');
             if (canvasCtx && this.videoElement.nativeElement) {
                 canvasCtx.clearRect(0, 0, this.canvasElement.nativeElement.width, this.canvasElement.nativeElement.height); // Pulisce il canvas prima di disegnare
                 //canvasCtx.drawImage(this.videoElement.nativeElement, 0, 0, this.canvasElement.nativeElement.width, this.canvasElement.nativeElement.height); // Disegna il frame del video sul canvas
                 console.log("keyData: ",this.keypointsData[this.frameCount])
-                this.drawCorrectKeypoints(this.frameCount, canvasCtx);  
+                await this.drawCorrectKeypoints(this.frameCount, canvasCtx);  
                 console.log("userKeyData: " ,this.userKeypointsData); 
                 await this.drawIncorrectKeypoints(this.frameCount, canvasCtx);
             }
@@ -332,7 +345,7 @@ export class ShowElaborationComponent implements OnInit {
             let response = await this.http.get<DetailFrame>(`${this.apiUrl}a/${this.video_uuid}/${this.uuid}/${this.frameCount}`).toPromise();
             if(response){
                 this.elaborationFrame = response;
-                console.log(this.elaborationFrame);
+                //console.log(this.elaborationFrame);
             }
             else 
                 console.error("Response from server is undefined: " + response)
@@ -341,42 +354,85 @@ export class ShowElaborationComponent implements OnInit {
         }
     }
 
-    calculateConnectionLengths() {
+    calculateConnectionLengths():  {
+        connection: number[];
+        lenght: number;
+        coefficient: number;
+    }[] | undefined{
+        if (!this.elaborationFrame || !this.elaborationFrame.connections) {
+            console.warn('elaborationFrame o connections non disponibili');
+            return ;
+        }
         
         const connections = this.elaborationFrame.connections;
     
+        // Verifica preliminare della disponibilità dei keypoints
+        if (!this.elaborationFrame.keypoints || !this.elaborationFrame.correct_keypoints) {
+            console.warn('Keypoints non disponibili');
+            return;
+        }
+        console.log("keypoints fuori dal map: ", this.elaborationFrame.keypoints);
         // Calcolare le lunghezze delle connessioni
         const lengths = connections.map(connection => {
-          // Verifica che gli indici siano validi
-            const start = connection.connection[0];
-            const end = connection.connection[1];
+            // Verifica che gli indici siano validi
+            const [start, end] = connection.connection;
+            
+            // Trova i keypoints nel modello corretto
             const videoModelStart = this.elaborationFrame.correct_keypoints.find(correct => correct[0] === start);
             const videoModelEnd = this.elaborationFrame.correct_keypoints.find(correct => correct[0] === end);
-
-            if (videoModelStart && videoModelEnd) {
-                const videoStart = this.elaborationFrame.keypoints[start];
-                const videoEnd = this.elaborationFrame.keypoints[end];
-        
-                // Calcolare la lunghezza usando la formula della distanza euclidea
     
-                const videoLength = Math.sqrt(
-                  Math.pow(videoEnd.x - videoStart.x, 2) +
-                  Math.pow(videoEnd.y - videoStart.y, 2)
-                );
-                const videoModelLength = Math.sqrt(
-                    Math.pow(videoModelEnd[1] - videoModelStart[1], 2) +
-                    Math.pow(videoModelEnd[2] - videoModelStart[2], 2)
-                  );
+            // Trova i keypoints video attuali
+            const videoStart = this.elaborationFrame.keypoints.find(kp => kp.index === start);
+            const videoEnd = this.elaborationFrame.keypoints.find(kp => kp.index === end);
     
-                return {"connection": [start, end], "lenght": videoLength, "coefficient": (videoModelLength/videoLength)};
-
+            // Log per debug
+            //console.log('VideoStart:', videoStart);
+            //console.log('VideoEnd:', videoEnd);
+            //console.log('Keypoints disponibili:', this.elaborationFrame.keypoints);
+    
+            if (!videoModelStart || !videoModelEnd) {
+                console.warn(`Keypoints modello mancanti per la connessione ${start}-${end}`);
+                return null;
             }
-
-            return null;
-        }).filter(length => length !== null)
-        
-        this.normalizeKeypoints(lengths);
-
+    
+            if (!videoStart || !videoEnd) {
+                console.warn(`Keypoints video mancanti per la connessione ${start}-${end}`);
+                return null;
+            }
+    
+            // Verifica validità delle coordinate
+            if (typeof videoStart.x !== 'number' || typeof videoStart.y !== 'number' ||
+                typeof videoEnd.x !== 'number' || typeof videoEnd.y !== 'number') {
+                console.warn('Coordinate non valide nei keypoints');
+                return null;
+            }
+    
+            // Calcolare la lunghezza usando la formula della distanza euclidea
+            const videoLength = Math.sqrt(
+                Math.pow(videoEnd.x - videoStart.x, 2) +
+                Math.pow(videoEnd.y - videoStart.y, 2)
+            );
+    
+            const videoModelLength = Math.sqrt(
+                Math.pow(videoModelEnd[1] - videoModelStart[1], 2) +
+                Math.pow(videoModelEnd[2] - videoModelStart[2], 2)
+            );
+    
+            // Verifica che le lunghezze siano valide
+            if (videoLength === 0) {
+                console.warn('Lunghezza video calcolata è 0');
+                return null;
+            }
+    
+            return {
+                "connection": [start, end],
+                "lenght": videoLength,
+                "coefficient": (videoModelLength/videoLength)
+            };
+        }).filter(length => length !== null);
+    
+        console.log("Lunghezze calcolate:", lengths);
+        return lengths;
     }
 
     calculateNewPosition(start: FilteredLandmark, end: FilteredLandmark, coefficient: number) {
