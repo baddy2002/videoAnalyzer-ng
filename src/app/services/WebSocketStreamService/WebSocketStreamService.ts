@@ -72,7 +72,7 @@ export class WebSocketStreamService {
         landmarks: landmarks,
         is_mirrored: is_mirrored
       };
-      console.log("sending socket data: " + data)
+      console.log("sending socket data: ", data)
       this.socket.send(JSON.stringify(data));
     } else {
       console.warn('WebSocket is not open. Unable to send data.');

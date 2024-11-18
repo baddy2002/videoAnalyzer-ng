@@ -26,12 +26,12 @@ export class VideoCaptureService {
     private videoElement!: HTMLVideoElement;
     private fps: number = 0;
     private allConnectionsGreen: Boolean = false;
-
+    private userInBox: Boolean = false;
     
     constructor(
-        @Inject(PLATFORM_ID) private platformId: Object,
-        private webSocketStreamService: WebSocketStreamService,
-        private http: HttpClient,
+        @Inject(PLATFORM_ID) private readonly platformId: Object,
+        private readonly webSocketStreamService: WebSocketStreamService,
+        private readonly http: HttpClient,
         private readonly keypointsStateService: KeypointsStateService,
     ) {
         
@@ -140,6 +140,14 @@ export class VideoCaptureService {
                                 if(this.socketData?.every((data: ConnectionData) => data.color === "#00FF00")){
                                     this.allConnectionsGreen=true;
                                     console.log("all connection are green");
+                                } 
+                                let socketFirstData = (this.socketData?.at(0) as ConnectionData)
+                                let inBox  =socketFirstData?.in_box;
+                                console.log("the fucking socketFirstData value is: ", socketFirstData);
+                                console.log("the fucking inBox value is: ", inBox);
+                                if((this.socketData?.at(0) as ConnectionData).in_box){
+                                    this.userInBox = true;
+                                    console.log("the user is in the box!");
                                 }
                                 
                                 for (const data  of this.socketData) {
@@ -255,7 +263,7 @@ export class VideoCaptureService {
                                 this.onResults(results, videoElement, canvasElement, frameCount, uuid, is_mirrored || false);  // Gestisci i risultati
                                 imageBitmap.close();  // Rilascia memoria bitmap
                             }
-                            if(this.allConnectionsGreen){
+                            if(this.allConnectionsGreen && this.userInBox){
                                 console.log("every connections right for frame: " + frameCount )
                                 frameCount++;
                             }
