@@ -5,7 +5,7 @@ import { FilesetResolver, PoseLandmarker, PoseLandmarkerOptions, DrawingUtils } 
 import { error } from 'console';
 import { WebSocketStreamService } from '../WebSocketStreamService/WebSocketStreamService';
 import { FilteredLandmark, Landmark } from '../../model/Landmark';
-import { Subscription } from 'rxjs';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { environment } from '../../../config/environment';
 import { ConnectionData } from '../../model/ConnectionData';
 import { KeypointsStateService } from './KeypointsStateService';
@@ -26,8 +26,24 @@ export class VideoCaptureService {
     private videoElement!: HTMLVideoElement;
     private fps: number = 0;
     private allConnectionsGreen: Boolean = false;
-    private userInBox: Boolean = false;
+    private readonly userInBoxSubject = new BehaviorSubject<boolean>(true); // Valore iniziale
+    userInBox$ = this.userInBoxSubject.asObservable(); // Observable pubblico  
+
+    setUserInBox(value: boolean): void {
+        this.userInBoxSubject.next(value); // Aggiorna il valore
+    }
     
+    checkUserInBox(): void {
+        let socketFirstData = (this.socketData?.at(0) as ConnectionData)
+        const inBox  =socketFirstData?.in_box;
+        if(inBox){
+            this.setUserInBox(inBox); // Aggiorna lo stato
+        } else {
+            this.setUserInBox(false); // Metti falso
+        }     
+        console.log(inBox ? 'The user is in the box!' : 'The user is not in the box');
+    }
+
     constructor(
         @Inject(PLATFORM_ID) private readonly platformId: Object,
         private readonly webSocketStreamService: WebSocketStreamService,
@@ -141,14 +157,7 @@ export class VideoCaptureService {
                                     this.allConnectionsGreen=true;
                                     console.log("all connection are green");
                                 } 
-                                let socketFirstData = (this.socketData?.at(0) as ConnectionData)
-                                let inBox  =socketFirstData?.in_box;
-                                console.log("the fucking socketFirstData value is: ", socketFirstData);
-                                console.log("the fucking inBox value is: ", inBox);
-                                if((this.socketData?.at(0) as ConnectionData).in_box){
-                                    this.userInBox = true;
-                                    console.log("the user is in the box!");
-                                }
+                                this.checkUserInBox();
                                 
                                 for (const data  of this.socketData) {
                                     const connectionObj = { start: data.connection[0], end: data.connection[1] }; // Indici dei landmark
@@ -251,7 +260,8 @@ export class VideoCaptureService {
                     try{
                         
                         try{
-                            if(frameCount%5==0) {
+                            console.log(`checking for frameCount: ${frameCount} with state: %s`, this.userInBoxSubject.value)
+                            if(frameCount%5==0 && this.userInBox$) {
                                 const imageBitmap = await createImageBitmap(
                                     videoElement,  // Sorgente (il video)
                                     0, 0,          // sx, sy: coordinate dell'angolo in alto a sinistra
@@ -263,7 +273,7 @@ export class VideoCaptureService {
                                 this.onResults(results, videoElement, canvasElement, frameCount, uuid, is_mirrored || false);  // Gestisci i risultati
                                 imageBitmap.close();  // Rilascia memoria bitmap
                             }
-                            if(this.allConnectionsGreen && this.userInBox){
+                            if(this.allConnectionsGreen && this.userInBoxSubject.value){
                                 console.log("every connections right for frame: " + frameCount )
                                 frameCount++;
                             }

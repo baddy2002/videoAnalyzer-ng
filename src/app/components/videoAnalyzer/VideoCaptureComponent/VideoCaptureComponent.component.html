@@ -21,5 +21,17 @@
             View History
         </button>        
     </div>
+    <div *ngIf="(userInBox$ | async) === false" class="flex justify-center items-center bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 rounded-lg shadow-md">
+        <div class="flex items-center space-x-3">
+          <!-- Icona Font Awesome -->
+          <i class="fa fa-exclamation-circle text-2xl text-orange-500"></i>
+          <!-- Messaggio di avviso -->
+          <span class="font-medium">
+            Please enter the box!
+          </span>
+        </div>
+    </div>
+      
+    
 </div>
   

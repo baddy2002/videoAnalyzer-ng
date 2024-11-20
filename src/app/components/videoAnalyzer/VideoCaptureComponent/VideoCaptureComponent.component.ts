@@ -14,6 +14,8 @@ import { Subscription } from 'rxjs';
   styleUrl: './VideoCaptureComponent.component.css'
 })
 export class VideoCaptureComponent implements OnInit, OnDestroy {
+    userInBox$;
+
     @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>; // Usa ! per evitare il controllo di null  
     @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
 
@@ -22,7 +24,7 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
     videoHeight!: number;  // Imposta un valore di altezza predefinito
     videoFPS!: number;
     private videoSubscription!: Subscription; // sottoscrizione al video per ottenere i dati dalla pagina precedente
-
+    
     uuid: string = '';
 
     constructor(
@@ -31,7 +33,7 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
         private readonly route : ActivatedRoute,
         private readonly videoStateService: VideoStateService, // Inietta il servizio VideoStateService
         private readonly router: Router,
-    ) {} // Inietta il servizio
+    ) {this.userInBox$ = this.videoCaptureService.userInBox$} // Inietta il servizio
   
     ngOnInit(): void {
         if (isPlatformBrowser(this.platformId)) {
@@ -51,6 +53,9 @@ export class VideoCaptureComponent implements OnInit, OnDestroy {
             });
           });
         }
+        this.videoCaptureService.userInBox$.subscribe((isInBox) => {
+          console.log('User in box state changed:', isInBox);
+        });
     }
   
     ngOnDestroy(): void {
