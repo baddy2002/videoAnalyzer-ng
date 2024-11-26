@@ -153,7 +153,7 @@ export class VideoCaptureService {
                             console.log("Received socket data:", this.socketData);
 
                             if(Array.isArray(this.socketData) && this.socketData.length > 0){
-                                if(this.socketData?.every((data: ConnectionData) => data.color === "#00FF00")){
+                                if(this.socketData?.every((data: ConnectionData) => data.color === "#00FF00" || data.color === "#99FF00")){
                                     this.allConnectionsGreen=true;
                                     console.log("all connection are green");
                                 } 
@@ -251,7 +251,7 @@ export class VideoCaptureService {
                 await this.initializePoseLandmarker(); // Inizializza il modello se non è ancora stato fatto
             }
 
-            let frameCount = 25;        //saltare più o meno un secondo del video
+            let frameCount = 65;        //saltare più o meno un secondo del video
             this.videoElement = videoElement;
 
             const processFrame = async () => {
